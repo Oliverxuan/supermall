@@ -1,20 +1,32 @@
 <template>
   <div id="home">
-    <nav-bar class="home-nav"><div slot="center">购物街</div></nav-bar>
+    <nav-bar class="home-nav"><div slot="center">OLIVER-XUAN</div></nav-bar>
+    <tab-control
+      :titles="['流行', '新款', '精选']"
+      @tabClick="tabClick"
+      ref="tabControl1"
+      class="tab-control"
+      v-show="isTabFixed"
+    ></tab-control>
 
     <scroll
       class="content"
       ref="scroll"
       :probe-type="3"
       @scroll="contentScroll"
+      :pullUpLoad="true"
+      @pullingUp="loadMore"
     >
-      <home-swiper :banners="banners"></home-swiper>
+      <home-swiper
+        :banners="banners"
+        @swiperImageLoad="swiperImageLoad"
+      ></home-swiper>
       <recommend-view :recommends="recommends"></recommend-view>
       <feature-view></feature-view>
       <tab-control
-        class="tab-control"
         :titles="['流行', '新款', '精选']"
         @tabClick="tabClick"
+        ref="tabControl2"
       ></tab-control>
       <goods-list :goods="showGoods" />
     </scroll>
@@ -34,6 +46,7 @@ import { getHomeMultidata, getHomeGoods } from "network/home";
 import GoodsList from "../../components/content/goods/GoodsList.vue";
 import Scroll from "../../components/common/scroll/Scroll.vue";
 import BackTop from "../../components/common/backTop/BackTop.vue";
+import { debounce } from "common/utils.js";
 
 export default {
   components: { NavBar },
@@ -58,7 +71,9 @@ export default {
         sell: { page: 0, list: [] }
       },
       isflag: false,
-      currentType: "pop"
+      currentType: "pop",
+      tabOffsetTop: 0,
+      isTabFixed: false
     };
   },
   computed: {
@@ -72,10 +87,22 @@ export default {
     this.getHomeGoods("new");
     this.getHomeGoods("sell");
   },
+  mounted() {
+    // console.log(this.$refs.tabControl.$el.offsetTop);
+
+    const refresh = debounce(this.$refs.scroll.refresh, 200);
+
+    this.$bus.$on("itemImageLoad", () => {
+      refresh();
+    });
+  },
   methods: {
     //  事件监听方法
+    swiperImageLoad() {
+      this.tabOffsetTop = this.$refs.tabControl2.$el.offsetTop;
+      console.log(this.tabOffsetTop);
+    },
     tabClick(index) {
-      console.log(index);
       switch (index) {
         case 0:
           this.currentType = "pop";
@@ -90,18 +117,30 @@ export default {
         default:
           break;
       }
+      this.$refs.tabControl1.currentIndex = index;
+      this.$refs.tabControl2.currentIndex = index;
     },
     backClick() {
       this.$refs.scroll.scrollTo(0, 0, 500);
     },
     contentScroll(position) {
-      if (position.y < -600) {
+      if (position.y < -1000) {
         this.isflag = true;
       } else {
         this.isflag = false;
       }
+      this.isTabFixed = position.y < -this.tabOffsetTop;
     },
-
+    loadMore() {
+      this.getHomeGoods(this.currentType);
+      this.$refs.scroll.scroll.refresh();
+    },
+    finishPullUp() {
+      this.scroll && this.scroll.finishPullUp();
+    },
+    refresh() {
+      this.scroll.refresh();
+    },
     //网络请求方法
     getHomeMultidata() {
       getHomeMultidata().then(res => {
@@ -114,6 +153,8 @@ export default {
       getHomeGoods(type, page).then(res => {
         this.goods[type].list.push(...res.data.list);
         this.goods[type].page += 1;
+
+        this.$refs.scroll.finishedPullUp();
       });
     }
   }
@@ -144,14 +185,31 @@ export default {
   overflow: hidden;
 } */
 #home {
+  /*padding-top: 44px;*/
   height: 100vh;
+  position: relative;
 }
 
 .home-nav {
-  background-color: var(--color-tint);
+  background-color: rgb(226, 181, 98);
   color: #fff;
-  position: relative;
-  z-index: 9;
+
+  /*在使用浏览器原生滚动时, 为了让导航不跟随一起滚动*/
+  /*position: fixed;*/
+  /*left: 0;*/
+  /*right: 0;*/
+  /*top: 0;*/
+  /*z-index: 9;*/
+}
+
+.content {
+  overflow: hidden;
+
+  position: absolute;
+  top: 44px;
+  bottom: 49px;
+  left: 0;
+  right: 0;
 }
 
 .tab-control {
@@ -159,12 +217,9 @@ export default {
   z-index: 9;
 }
 
-.content {
-  position: absolute;
-  top: 44px;
-  bottom: 49px;
-  left: 0;
-  right: 0;
-  overflow: hidden;
-}
+/*.content {*/
+/*height: calc(100% - 93px);*/
+/*overflow: hidden;*/
+/*margin-top: 44px;*/
+/*}*/
 </style>
