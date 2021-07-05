@@ -1,13 +1,13 @@
 <template>
-  <h2>购物车</h2>
+  <div>
+    <h1>页面建设中....</h1>
+  </div>
 </template>
 
 <script>
-  export default {
-    name: "Cart"
-  }
+export default {
+  name: "Cart"
+};
 </script>
 
-<style scoped>
-
-</style>
+<style scoped></style>

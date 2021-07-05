@@ -73,13 +73,21 @@ export default {
       isflag: false,
       currentType: "pop",
       tabOffsetTop: 0,
-      isTabFixed: false
+      isTabFixed: false,
+      saveY: 0
     };
   },
   computed: {
     showGoods() {
       return this.goods[this.currentType].list;
     }
+  },
+  activated() {
+    this.$refs.scroll.scrollTo(0, this.saveY, 0);
+    this.$refs.scroll.refresh();
+  },
+  deactivated() {
+    this.saveY = this.$refs.scroll.getScrollY();
   },
   created() {
     this.getHomeMultidata();
@@ -100,7 +108,7 @@ export default {
     //  事件监听方法
     swiperImageLoad() {
       this.tabOffsetTop = this.$refs.tabControl2.$el.offsetTop;
-      console.log(this.tabOffsetTop);
+      // console.log(this.tabOffsetTop);
     },
     tabClick(index) {
       switch (index) {
@@ -141,6 +149,7 @@ export default {
     refresh() {
       this.scroll.refresh();
     },
+
     //网络请求方法
     getHomeMultidata() {
       getHomeMultidata().then(res => {
