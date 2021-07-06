@@ -1,6 +1,9 @@
 <template>
   <div id="detail">
-    <detail-nav-bar class="detail-nav"></detail-nav-bar>
+    <detail-nav-bar
+      @titleClick="titleClick"
+      class="detail-nav"
+    ></detail-nav-bar>
     <scroll class="content " ref="scroll">
       <detail-swiper :top-images="topImages"></detail-swiper>
       <detail-base-info :goods="goods"></detail-base-info>
@@ -9,15 +12,30 @@
         :detail-info="detailInfo"
         @imageLoad="imageLoad"
       ></detail-goods-info>
-      <detail-param-info :param-info="paramInfo"></detail-param-info>
-      <detail-comment-info :comment-info="commentInfo"></detail-comment-info>
+      <detail-param-info
+        ref="params"
+        :param-info="paramInfo"
+      ></detail-param-info>
+      <detail-comment-info
+        ref="comment"
+        :comment-info="commentInfo"
+      ></detail-comment-info>
+      <goods-list ref="recommend" :goods="recommend"></goods-list>
     </scroll>
+    <back-top v-show="showBackTop" @click.native="backTop" />
+    <detail-bottom-bar @addToCart="addToCart"></detail-bottom-bar>
   </div>
 </template>
 
 <script>
 import DetailNavBar from "./childComps/DetailNavBar.vue";
-import { getDetail, Goods, Shop, GoodsParam } from "../../network/detail";
+import {
+  getDetail,
+  Goods,
+  Shop,
+  GoodsParam,
+  getRecommend
+} from "../../network/detail";
 import DetailSwiper from "./childComps/DetailSwiper.vue";
 import DetailBaseInfo from "./childComps/DetailBaseInfo.vue";
 import DetailShopInfo from "./childComps/DetailShopInfo.vue";
@@ -25,6 +43,10 @@ import Scroll from "../../components/common/scroll/Scroll.vue";
 import DetailGoodsInfo from "./childComps/DetailGoodsInfo.vue";
 import DetailParamInfo from "./childComps/DetailParamInfo.vue";
 import DetailCommentInfo from "./childComps/DetailCommentInfo.vue";
+import GoodsList from "../../components/content/goods/GoodsList.vue";
+import { itemListenerMixin, backTopMixin } from "../../common/mixin";
+import DetailBottomBar from "./childComps/DetailBottomBar.vue";
+import Toast from "../../components/common/toast/Toast.vue";
 
 export default {
   name: "Detail",
@@ -36,8 +58,13 @@ export default {
     Scroll,
     DetailGoodsInfo,
     DetailParamInfo,
-    DetailCommentInfo
+    DetailCommentInfo,
+    GoodsList,
+    DetailBottomBar,
+    Toast
   },
+  mixins: [itemListenerMixin],
+  mixins: [backTopMixin],
   data() {
     return {
       iid: null,
@@ -46,7 +73,10 @@ export default {
       shop: {},
       detailInfo: {},
       paramInfo: {},
-      commentInfo: {}
+      commentInfo: {},
+      goodsList: [],
+      recommend: [],
+      themeTopYs: [0, 1000, 2000, 3000]
     };
   },
   created() {
@@ -54,7 +84,6 @@ export default {
 
     getDetail(this.iid).then(res => {
       const data = res.result;
-      console.log(res);
       this.topImages = data.itemInfo.topImages;
 
       this.goods = new Goods(
@@ -72,15 +101,39 @@ export default {
         data.itemParams.rule
       );
 
-      // if (data.rate.list) {
-      //   this.commentInfo = data.rate.list[0];
-      // }
+      if (data.rate.cRate !== 0) {
+        this.commentInfo = data.rate.list[0];
+      }
+    });
+
+    getRecommend().then(res => {
+      this.recommend = res.data.list;
     });
   },
 
   methods: {
     imageLoad() {
       this.$refs.scroll.refresh();
+
+      this.themeTopYs = [];
+      this.themeTopYs.push(0);
+      this.themeTopYs.push(this.$refs.params.$el.offsetTop);
+      this.themeTopYs.push(this.$refs.comment.$el.offsetTop);
+      this.themeTopYs.push(this.$refs.recommend.$el.offsetTop);
+    },
+    titleClick(index) {
+      console.log(index);
+      this.$refs.scroll.scrollTo(0, -this.themeTopYs[index], 100);
+    },
+    addToCart() {
+      // 2.将商品信息添加到Store中
+      const obj = {};
+      obj.iid = this.iid;
+      obj.imgURL = this.topImages[0];
+      obj.title = this.goods.title;
+      obj.desc = this.goods.desc;
+      obj.price = this.goods.realPrice;
+      this.$store.dispatch("addToCart", obj).then(() => {});
     }
   }
 };
