@@ -5,3 +5,4 @@ function fn() {
   console.log("3");
 }
 fn();
+SVGFEDropShadowElement;
